@@ -1,0 +1,102 @@
+#############################
+*.pdf
+quicksort*
+test*
+!*.cpp
+!*.hpp
+#############################
+
+# Compiled Static libraries #
+#############################
+*.lai
+*.la
+*.a
+*.lib
+
+
+# Compiled Object files #
+#########################
+*.com
+*.class
+*.o
+*.slo
+*.lo
+*.obj
+
+# Compiled dynamic libraries #
+#############################
+*.so
+*.dylib
+*.dll
+
+# Executables #
+##############
+*.exe
+*.out
+*.app
+
+# Precompiled headers #
+######################
+*.gch
+*.pch
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+.AppleDouble
+.LSOverride
+Icon
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.DocumentRevisions-V100
+.f
+
+# Temporary files #
+##################
+*~
+.nfs*
+
+# Build directory #
+##################
+[Bb]uild
+CMakeCache.txt
+cmake_install.cmake
+CMakeFiles
+build
+cmake_out
+
+node_modules/
+settings.json
+secretnotes.md
+imports/lib/
+public/fonts/
+.history/
+.project
+.classpath
+.vscode/*
+*.code-workspace
+*.plist
+/bin/
