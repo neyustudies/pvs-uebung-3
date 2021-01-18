@@ -77,6 +77,7 @@ int main(int argc, char* argv[]) {
         init_mat(A, d1, d2);
         B = alloc_mat(d2, d3);
         init_mat(B, d2, d3);
+        printf("Master:  B[4][2] is:  %.f\n", B[4][2]);
         // no initialisation of C, because it gets filled by matmult
         C_ser = alloc_mat(d1, d3);
         C_par = alloc_mat(d1, d3);
@@ -90,10 +91,14 @@ int main(int argc, char* argv[]) {
                     C_ser[i][j] += A[i][k] * B[k][j];
         printf("Done in %.3f seconds!\n", MPI_Wtime() - start);
 
+        // Send B and relevant parts of A to workers.
         for (int worker_id = 1; worker_id < numNodes; ++worker_id) {
-            float* buf = (float*)calloc(1, sizeof(float));
-            *buf = 42;
-            MPI_Send(buf, 1, MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD);
+            MPI_Send(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, worker_id, 0,
+                     MPI_COMM_WORLD);
+
+            // float* buf = (float*)calloc(1, sizeof(float));
+            //*buf = 42;
+            // MPI_Send(buf, 1, MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD);
         }
 
         /* test output */
@@ -112,10 +117,16 @@ int main(int argc, char* argv[]) {
     } else {
         printf("Waiting for stuff to do (%d/%d)...\n", nodeID, numNodes);
 
-        float* buf = (float*)calloc(1, sizeof(float));
-        MPI_Recv(buf, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+        float** B = alloc_mat(MAT_SIZE, MAT_SIZE);
+        MPI_Recv(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, 0, 0, MPI_COMM_WORLD,
+                 &status);
 
-        printf("Is this the answer? %.f\n", *buf);
+        printf("Worker: B[4][2] is:  %.f\n", B[4][2]);
+
+        // float* buf = (float*)calloc(1, sizeof(float));
+        // MPI_Recv(buf, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+
+        // printf("Is this the answer? %.f\n", *buf);
     }
 
     MPI_Finalize();
