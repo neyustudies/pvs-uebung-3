@@ -1,7 +1,8 @@
 #############################
 *.pdf
-quicksort*
+helloMPI*
 test*
+matmult*
 !*.cpp
 !*.hpp
 #############################
