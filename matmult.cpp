@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-#define MAT_SIZE 1000
+#define MAT_SIZE 100
 
 // ---------------------------------------------------------------------------
 // allocate space for empty matrix A[row][col]
