@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <mpi.h>
 
+#define MAT_SIZE 1000
+
 // ---------------------------------------------------------------------------
 // allocate space for empty matrix A[row][col]
 // access to matrix elements possible with:
@@ -56,59 +58,64 @@ int main(int argc, char* argv[]) {
     MPI_Init(&argc, &argv);
     MPI_Comm_size(MPI_COMM_WORLD, &numNodes);
     MPI_Comm_rank(MPI_COMM_WORLD, &nodeID);
+    MPI_Status status;
 
     if (nodeID == 0) {
-
-        float **A, **B, **C;  // matrices
+        float **A, **B, **C_ser, **C_par;  // matrices
         int d1, d2, d3;       // dimensions of matrices
         int i, j, k;          // loop variables
 
-        /* print user instruction */
-        if (argc != 4) {
-            printf("Matrix multiplication: C = A x B\n");
-            printf("Usage: %s <NumRowA> <NumColA> <NumColB>\n", argv[0]);
-            MPI_Finalize();
-            return 0;
-        }
+        d1 = MAT_SIZE;
+        d2 = MAT_SIZE;
+        d3 = MAT_SIZE;
 
-        /* read user input */
-        d1 = atoi(argv[1]);  // rows of A and C
-        d2 = atoi(argv[2]);  // cols of A and rows of B
-        d3 = atoi(argv[3]);  // cols of B and C
-
-        printf("Matrix sizes C[%d][%d] = A[%d][%d] x B[%d][%d]\n", d1, d3, d1, d2,
-               d2, d3);
+        printf("Matrix sizes C[%d][%d] = A[%d][%d] x B[%d][%d]\n", d1, d3, d1,
+               d2, d2, d3);
 
         /* prepare matrices */
         A = alloc_mat(d1, d2);
         init_mat(A, d1, d2);
         B = alloc_mat(d2, d3);
         init_mat(B, d2, d3);
-        C = alloc_mat(
-            d1, d3);  // no initialisation of C, because it gets filled by matmult
+        // no initialisation of C, because it gets filled by matmult
+        C_ser = alloc_mat(d1, d3);
+        C_par = alloc_mat(d1, d3);
 
         /* serial version of matmult */
-        printf("Perform matrix multiplication...\n");
+        printf("Perform serial matrix multiplication...\n");
+        double start = MPI_Wtime();
         for (i = 0; i < d1; i++)
             for (j = 0; j < d3; j++)
                 for (k = 0; k < d2; k++)
-                    C[i][j] += A[i][k] * B[k][j];
+                    C_ser[i][j] += A[i][k] * B[k][j];
+        printf("Done in %.3f seconds!\n", MPI_Wtime() - start);
+
+        for (int worker_id = 1; worker_id < numNodes; ++worker_id) {
+            float* buf = (float*)calloc(1, sizeof(float));
+            *buf = 42;
+            MPI_Send(buf, 1, MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD);
+        }
 
         /* test output */
-        print_mat(A, d1, d2, "A");
-        print_mat(B, d2, d3, "B");
-        print_mat(C, d1, d3, "C");
+        // print_mat(A, d1, d2, "A");
+        // print_mat(B, d2, d3, "B");
+        // print_mat(C, d1, d3, "C");
 
         printf("\nDone.\n");
 
         /* free dynamic memory */
         free_mat(A, d1);
         free_mat(B, d2);
-        free_mat(C, d1);
-
+        free_mat(C_ser, d1);
+        free_mat(C_par, d1);
 
     } else {
         printf("Waiting for stuff to do (%d/%d)...\n", nodeID, numNodes);
+
+        float* buf = (float*)calloc(1, sizeof(float));
+        MPI_Recv(buf, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+
+        printf("Is this the answer? %.f\n", *buf);
     }
 
     MPI_Finalize();
