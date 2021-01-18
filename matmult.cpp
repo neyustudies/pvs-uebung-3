@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <mpi.h>
 
 // ---------------------------------------------------------------------------
 // allocate space for empty matrix A[row][col]
@@ -50,51 +51,66 @@ void free_mat(float** A, int num_rows) {
 // ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    float **A, **B, **C;  // matrices
-    int d1, d2, d3;       // dimensions of matrices
-    int i, j, k;          // loop variables
+    int nodeID, numNodes;
 
-    /* print user instruction */
-    if (argc != 4) {
-        printf("Matrix multiplication: C = A x B\n");
-        printf("Usage: %s <NumRowA> <NumColA> <NumColB>\n", argv[0]);
-        return 0;
+    MPI_Init(&argc, &argv);
+    MPI_Comm_size(MPI_COMM_WORLD, &numNodes);
+    MPI_Comm_rank(MPI_COMM_WORLD, &nodeID);
+
+    if (nodeID == 0) {
+
+        float **A, **B, **C;  // matrices
+        int d1, d2, d3;       // dimensions of matrices
+        int i, j, k;          // loop variables
+
+        /* print user instruction */
+        if (argc != 4) {
+            printf("Matrix multiplication: C = A x B\n");
+            printf("Usage: %s <NumRowA> <NumColA> <NumColB>\n", argv[0]);
+            MPI_Finalize();
+            return 0;
+        }
+
+        /* read user input */
+        d1 = atoi(argv[1]);  // rows of A and C
+        d2 = atoi(argv[2]);  // cols of A and rows of B
+        d3 = atoi(argv[3]);  // cols of B and C
+
+        printf("Matrix sizes C[%d][%d] = A[%d][%d] x B[%d][%d]\n", d1, d3, d1, d2,
+               d2, d3);
+
+        /* prepare matrices */
+        A = alloc_mat(d1, d2);
+        init_mat(A, d1, d2);
+        B = alloc_mat(d2, d3);
+        init_mat(B, d2, d3);
+        C = alloc_mat(
+            d1, d3);  // no initialisation of C, because it gets filled by matmult
+
+        /* serial version of matmult */
+        printf("Perform matrix multiplication...\n");
+        for (i = 0; i < d1; i++)
+            for (j = 0; j < d3; j++)
+                for (k = 0; k < d2; k++)
+                    C[i][j] += A[i][k] * B[k][j];
+
+        /* test output */
+        print_mat(A, d1, d2, "A");
+        print_mat(B, d2, d3, "B");
+        print_mat(C, d1, d3, "C");
+
+        printf("\nDone.\n");
+
+        /* free dynamic memory */
+        free_mat(A, d1);
+        free_mat(B, d2);
+        free_mat(C, d1);
+
+
+    } else {
+        printf("Waiting for stuff to do (%d/%d)...\n", nodeID, numNodes);
     }
 
-    /* read user input */
-    d1 = atoi(argv[1]);  // rows of A and C
-    d2 = atoi(argv[2]);  // cols of A and rows of B
-    d3 = atoi(argv[3]);  // cols of B and C
-
-    printf("Matrix sizes C[%d][%d] = A[%d][%d] x B[%d][%d]\n", d1, d3, d1, d2,
-           d2, d3);
-
-    /* prepare matrices */
-    A = alloc_mat(d1, d2);
-    init_mat(A, d1, d2);
-    B = alloc_mat(d2, d3);
-    init_mat(B, d2, d3);
-    C = alloc_mat(
-        d1, d3);  // no initialisation of C, because it gets filled by matmult
-
-    /* serial version of matmult */
-    printf("Perform matrix multiplication...\n");
-    for (i = 0; i < d1; i++)
-        for (j = 0; j < d3; j++)
-            for (k = 0; k < d2; k++)
-                C[i][j] += A[i][k] * B[k][j];
-
-    /* test output */
-    print_mat(A, d1, d2, "A");
-    print_mat(B, d2, d3, "B");
-    print_mat(C, d1, d3, "C");
-
-    printf("\nDone.\n");
-
-    /* free dynamic memory */
-    free_mat(A, d1);
-    free_mat(B, d2);
-    free_mat(C, d1);
-
+    MPI_Finalize();
     return 0;
 }
