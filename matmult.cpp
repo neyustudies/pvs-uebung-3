@@ -4,6 +4,8 @@
 
 #define MAT_SIZE 100
 
+#define MASTER_ID 0
+
 // ---------------------------------------------------------------------------
 // allocate space for empty matrix A[row][col]
 // access to matrix elements possible with:
@@ -53,14 +55,15 @@ void free_mat(float** A, int num_rows) {
 // ---------------------------------------------------------------------------
 
 int main(int argc, char* argv[]) {
-    int nodeID, numNodes;
+    int node_id, num_nodes, num_workers;
 
     MPI_Init(&argc, &argv);
-    MPI_Comm_size(MPI_COMM_WORLD, &numNodes);
-    MPI_Comm_rank(MPI_COMM_WORLD, &nodeID);
+    MPI_Comm_size(MPI_COMM_WORLD, &num_nodes);
+    num_workers = num_nodes - 1;
+    MPI_Comm_rank(MPI_COMM_WORLD, &node_id);
     MPI_Status status;
 
-    if (nodeID == 0) {
+    if (node_id == 0) {
         float **A, **B, **C_ser, **C_par;  // matrices
         int d1, d2, d3;       // dimensions of matrices
         int i, j, k;          // loop variables
@@ -92,11 +95,32 @@ int main(int argc, char* argv[]) {
         printf("Done in %.3f seconds!\n", MPI_Wtime() - start);
 
         // Send B and relevant parts of A to workers.
-        for (int worker_id = 1; worker_id < numNodes; ++worker_id) {
+        for (int worker_id = 1; worker_id < num_nodes; ++worker_id) {
+            // Send B.
             MPI_Send(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, worker_id, 0,
                      MPI_COMM_WORLD);
 
-            // float* buf = (float*)calloc(1, sizeof(float));
+            // Number of rows of A that will be transferred to the worker.
+            // Will not always be even, e.g. 333, 333 and 334 for 1000x1000
+            // matrices and 3 workers.
+            int n_rows_a = MAT_SIZE / num_workers;
+            if (worker_id == num_workers) {
+                n_rows_a += MAT_SIZE % num_workers;
+            }
+            MPI_Send(&n_rows_a, 1, MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD);
+
+            float** part_A = alloc_mat(n_rows_a, MAT_SIZE);
+            int row_offset = (worker_id - 1) * (MAT_SIZE / num_workers);
+            for (int row = 0; row < n_rows_a; ++row) {
+                for (int col = 0; col < MAT_SIZE; ++col) {
+                    part_A[row][col] = A[row + row_offset][col];
+                }
+            }
+            // Send part_A.
+            MPI_Send(*part_A, n_rows_a * MAT_SIZE, MPI_FLOAT, worker_id, 0,
+                     MPI_COMM_WORLD);
+
+            // float* buf_A = (float*)calloc(n_rows_a, sizeof(float));
             //*buf = 42;
             // MPI_Send(buf, 1, MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD);
         }
@@ -115,16 +139,33 @@ int main(int argc, char* argv[]) {
         free_mat(C_par, d1);
 
     } else {
-        printf("Waiting for stuff to do (%d/%d)...\n", nodeID, numNodes);
+        printf("Waiting for stuff to do (%d/%d)...\n", node_id, num_nodes);
 
         float** B = alloc_mat(MAT_SIZE, MAT_SIZE);
-        MPI_Recv(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, 0, 0, MPI_COMM_WORLD,
-                 &status);
+        MPI_Recv(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, MASTER_ID, 0,
+                 MPI_COMM_WORLD, &status);
 
         printf("Worker: B[4][2] is:  %.f\n", B[4][2]);
 
-        // float* buf = (float*)calloc(1, sizeof(float));
-        // MPI_Recv(buf, 1, MPI_FLOAT, 0, 0, MPI_COMM_WORLD, &status);
+        int n_rows_a;
+        MPI_Recv(&n_rows_a, 1, MPI_INT, MASTER_ID, 0, MPI_COMM_WORLD, &status);
+
+        printf("Will get %d rows of A (%d/%d)...\n", n_rows_a, node_id,
+               num_nodes);
+
+        float** part_A = alloc_mat(n_rows_a, MAT_SIZE);
+        MPI_Recv(*part_A, n_rows_a * MAT_SIZE, MPI_FLOAT, MASTER_ID, 0,
+                 MPI_COMM_WORLD, &status);
+
+        float** part_C = alloc_mat(n_rows_a, MAT_SIZE);
+
+        for (int i = 0; i < n_rows_a; ++i) {
+            for (int j = 0; j < MAT_SIZE; ++j) {
+                for (int k = 0; k < MAT_SIZE; ++k) {
+                    part_C[i][j] += part_A[i][k] * B[k][j];
+                }
+            }
+        }
 
         // printf("Is this the answer? %.f\n", *buf);
     }
