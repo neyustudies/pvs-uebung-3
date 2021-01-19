@@ -22,8 +22,8 @@ matmult:
 
 .PHONY: test
 test: build
-	mpirun -np 4 helloMPI
-	mpirun -np 4 matmult_A
+	mpirun helloMPI
+	mpirun matmult_A
 
 .PHONY: clean
 clean:
