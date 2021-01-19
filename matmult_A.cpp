@@ -92,8 +92,8 @@ int main(int argc, char* argv[]) {
 
     if (node_id == 0) {
         float **A, **B, **C_ser, **C_dist;  // matrices
-        int d1, d2, d3;       // dimensions of matrices
-        int i, j, k;          // loop variables
+        int d1, d2, d3;                     // dimensions of matrices
+        int i, j, k;                        // loop variables
 
         d1 = MAT_SIZE;
         d2 = MAT_SIZE;
@@ -211,7 +211,6 @@ int main(int argc, char* argv[]) {
         free_mat(B, MAT_SIZE);
         free_mat(part_A, num_rows_part);
         free_mat(part_C, num_rows_part);
-
     }
 
     MPI_Finalize();
