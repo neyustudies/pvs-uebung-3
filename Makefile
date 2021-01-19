@@ -18,16 +18,16 @@ helloMPI:
 
 .PHONY: matmult
 matmult:
-	mpic++ matmult.cpp -o matmult
+	mpic++ matmult_A.cpp -o matmult_A
 
 .PHONY: test
 test: build
 	mpirun -np 4 helloMPI
-	mpirun -np 4 matmult
+	mpirun -np 4 matmult_A
 
 .PHONY: clean
 clean:
-	rm helloMPI matmult
+	rm helloMPI matmult_A
 
 .PHONY: codeformat
 codeformat:
