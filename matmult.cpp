@@ -91,7 +91,7 @@ int main(int argc, char* argv[]) {
     MPI_Status status;
 
     if (node_id == 0) {
-        float **A, **B, **C_ser, **C_par;  // matrices
+        float **A, **B, **C_ser, **C_dist;  // matrices
         int d1, d2, d3;       // dimensions of matrices
         int i, j, k;          // loop variables
 
@@ -110,20 +110,20 @@ int main(int argc, char* argv[]) {
 
         // no initialisation of C, because it gets filled by matmult
         C_ser = alloc_mat(d1, d3);
-        C_par = alloc_mat(d1, d3);
+        C_dist = alloc_mat(d1, d3);
 
         /* serial version of matmult */
-        printf("Perform serial matrix multiplication...\n");
+        printf("Performing serial matrix multiplication...\n");
         double start = MPI_Wtime();
         for (i = 0; i < d1; i++)
             for (j = 0; j < d3; j++)
                 for (k = 0; k < d2; k++)
                     C_ser[i][j] += A[i][k] * B[k][j];
-        printf("[Serial]  Done in %.3f seconds!\n", MPI_Wtime() - start);
+        printf("[Serial]\tDone in %.5f seconds!\n", MPI_Wtime() - start);
 
-        printf("Perform parallel matrix multiplication...\n");
+        printf("Performing parallel matrix multiplication...\n");
         // Send B and relevant parts of A to workers.
-        double start_par = MPI_Wtime();
+        double start_dist = MPI_Wtime();
         for (int worker_id = 1; worker_id < num_nodes; ++worker_id) {
             // Send B.
             MPI_Send(*B, MAT_SIZE * MAT_SIZE, MPI_FLOAT, worker_id, 0,
@@ -144,23 +144,24 @@ int main(int argc, char* argv[]) {
             MPI_Send(*part_A, num_rows_part * MAT_SIZE, MPI_FLOAT, worker_id, 0,
                      MPI_COMM_WORLD);
         }
-        printf("[Parallel]  Done sending data in %.3f seconds!\n",
-               MPI_Wtime() - start_par);
+        printf("[Distributed]\tDone sending data in %.5f seconds!\n",
+               MPI_Wtime() - start_dist);
 
         // Collect data into C.
-        double start_par_collect = MPI_Wtime();
+        double start_dist_collect = MPI_Wtime();
         for (int worker_id = 1; worker_id < num_nodes; ++worker_id) {
             int row_offset = (worker_id - 1) * (MAT_SIZE / num_workers);
             int num_rows_part = calc_num_rows_part(worker_id, num_workers);
-            MPI_Recv(*C_par + (MAT_SIZE * row_offset), num_rows_part * MAT_SIZE,
-                     MPI_FLOAT, worker_id, 0, MPI_COMM_WORLD, &status);
+            MPI_Recv(*C_dist + (MAT_SIZE * row_offset),
+                     num_rows_part * MAT_SIZE, MPI_FLOAT, worker_id, 0,
+                     MPI_COMM_WORLD, &status);
         }
-        printf("[Parallel]  Done collecting data in %.3f seconds!\n",
-               MPI_Wtime() - start_par_collect);
-        printf("[Parallel]  Done in a total of %.3f seconds!\n",
-               MPI_Wtime() - start_par);
+        printf("[Distributed]\tDone collecting data in %.5f seconds!\n",
+               MPI_Wtime() - start_dist_collect);
+        printf("[Distributed]\tDone in a total of %.5f seconds!\n",
+               MPI_Wtime() - start_dist);
 
-        assert(mat_equal(C_ser, C_par, MAT_SIZE, MAT_SIZE));
+        assert(mat_equal(C_ser, C_dist, MAT_SIZE, MAT_SIZE));
 
         printf("\nDone :)\n");
 
@@ -168,7 +169,7 @@ int main(int argc, char* argv[]) {
         free_mat(A, d1);
         free_mat(B, d2);
         free_mat(C_ser, d1);
-        free_mat(C_par, d1);
+        free_mat(C_dist, d1);
 
     } else {
         double start = MPI_Wtime();
@@ -184,7 +185,7 @@ int main(int argc, char* argv[]) {
         MPI_Recv(*part_A, num_rows_part * MAT_SIZE, MPI_FLOAT, MASTER_ID, 0,
                  MPI_COMM_WORLD, &status);
 
-        printf("[Parallel#%d]  Done recieving in %.3f seconds!\n", node_id,
+        printf("[Distributed#%d]\tDone recieving in %.5f seconds!\n", node_id,
                MPI_Wtime() - start);
         double start_calc = MPI_Wtime();
 
@@ -197,14 +198,14 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-        printf("[Parallel#%d]  Done calculating in %.3f seconds!\n", node_id,
+        printf("[Distributed#%d]\tDone calculating in %.5f seconds!\n", node_id,
                MPI_Wtime() - start_calc);
         double start_send = MPI_Wtime();
 
         MPI_Send(*part_C, num_rows_part * MAT_SIZE, MPI_FLOAT, MASTER_ID, 0,
                  MPI_COMM_WORLD);
 
-        printf("[Parallel#%d]  Done sending in %.3f seconds!\n", node_id,
+        printf("[Distributed#%d]\tDone sending in %.5f seconds!\n", node_id,
                MPI_Wtime() - start_send);
 
         free_mat(B, MAT_SIZE);
