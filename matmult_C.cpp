@@ -32,7 +32,7 @@ float** alloc_mat(int row, int col) {
 void init_mat(float** A, int row, int col) {
     for (int i = 0; i < row * col; i++)
         // A[0][i] = (float)(rand() % 10);
-        A[0][i] = (float) i;
+        A[0][i] = (float)i;
 }
 
 // ---------------------------------------------------------------------------
@@ -91,22 +91,20 @@ int main(int argc, char* argv[]) {
     MPI_Comm_rank(MPI_COMM_WORLD, &node_id);
     MPI_Status status;
 
-
-    int *sendcounts = (int*) calloc(num_nodes, sizeof(int));
-    int *displs = (int*) calloc(num_nodes, sizeof(int));
-    int *sendcounts_row = (int*) calloc(num_nodes, sizeof(int));
-    int *displs_row = (int*) calloc(num_nodes, sizeof(int));
+    int* sendcounts = (int*)calloc(num_nodes, sizeof(int));
+    int* displs = (int*)calloc(num_nodes, sizeof(int));
+    int* sendcounts_row = (int*)calloc(num_nodes, sizeof(int));
+    int* displs_row = (int*)calloc(num_nodes, sizeof(int));
 
     for (int i = 0; i < num_nodes; ++i) {
-        int num_rows_part =  MAT_SIZE / num_workers;
+        int num_rows_part = MAT_SIZE / num_workers;
         displs[i] = (i - 1) * (num_rows_part * MAT_SIZE);
         if (i == num_workers) {
-            num_rows_part +=  MAT_SIZE % num_workers;
+            num_rows_part += MAT_SIZE % num_workers;
         }
         sendcounts[i] = MAT_SIZE * num_rows_part;
     }
     sendcounts[num_workers] += (MAT_SIZE * MAT_SIZE) % num_workers;
-
 
     if (node_id == 0) {
         float **A, **B, **C_ser, **C_dist;  // matrices
@@ -139,7 +137,6 @@ int main(int argc, char* argv[]) {
                     C_ser[i][j] += A[i][k] * B[k][j];
         printf("[Serial]\tDone in %.5f seconds!\n", MPI_Wtime() - start);
 
-
         printf("Performing parallel matrix multiplication...\n");
 
         // Broadcast B to all workers
@@ -148,18 +145,16 @@ int main(int argc, char* argv[]) {
                   MPI_COMM_WORLD);
 
         // Scatter A
-        MPI_Scatterv(A[0], sendcounts, displs, MPI_FLOAT,
-                MPI_IN_PLACE, 0, MPI_FLOAT,
-                MASTER_ID, MPI_COMM_WORLD);
+        MPI_Scatterv(A[0], sendcounts, displs, MPI_FLOAT, MPI_IN_PLACE, 0,
+                     MPI_FLOAT, MASTER_ID, MPI_COMM_WORLD);
 
         printf("[Distributed]\tDone sending data in %.5f seconds!\n",
                MPI_Wtime() - start_dist);
 
         // Gather C
         double start_dist_collect = MPI_Wtime();
-        MPI_Gatherv(MPI_IN_PLACE, 0, MPI_FLOAT,
-                C_dist[0], sendcounts, displs, MPI_FLOAT,
-                MASTER_ID, MPI_COMM_WORLD);
+        MPI_Gatherv(MPI_IN_PLACE, 0, MPI_FLOAT, C_dist[0], sendcounts, displs,
+                    MPI_FLOAT, MASTER_ID, MPI_COMM_WORLD);
 
         printf("[Distributed]\tDone collecting data in %.5f seconds!\n",
                MPI_Wtime() - start_dist_collect);
@@ -189,9 +184,8 @@ int main(int argc, char* argv[]) {
 
         // Recieve scattered A
         float* part_A = (float*)calloc(num_elements, sizeof(float));
-        MPI_Scatterv(MPI_IN_PLACE, sendcounts, displs, MPI_FLOAT,
-                part_A, num_elements, MPI_FLOAT,
-                MASTER_ID, MPI_COMM_WORLD);
+        MPI_Scatterv(MPI_IN_PLACE, sendcounts, displs, MPI_FLOAT, part_A,
+                     num_elements, MPI_FLOAT, MASTER_ID, MPI_COMM_WORLD);
 
         printf("[Distributed#%d]\tDone recieving in %.5f seconds!\n", node_id,
                MPI_Wtime() - start);
@@ -221,12 +215,10 @@ int main(int argc, char* argv[]) {
 
         // Send C (Gather)
         double start_send = MPI_Wtime();
-        MPI_Gatherv(part_C, num_elements, MPI_FLOAT,
-                MPI_IN_PLACE, sendcounts, displs, MPI_FLOAT,
-                MASTER_ID, MPI_COMM_WORLD);
+        MPI_Gatherv(part_C, num_elements, MPI_FLOAT, MPI_IN_PLACE, sendcounts,
+                    displs, MPI_FLOAT, MASTER_ID, MPI_COMM_WORLD);
         printf("[Distributed#%d]\tDone sending in %.5f seconds!\n", node_id,
                MPI_Wtime() - start_send);
-
 
         // free dynamic memory
         free_mat(B, MAT_SIZE);
