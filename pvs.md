@@ -29,13 +29,6 @@ If not indicated otherwise, tests were performed on a
 | sending result (each worker) |        0.00047 |         0.015 |
 | total                        |        3.09687 |       100.000 |
 
-| number of workers | time (seconds) | speedup |
-|-------------------+----------------+---------|
-|          (serial) |       10.23009 |       1 |
-|                 1 |        8.06448 |    1.27 |
-|                 2 |        4.21712 |    2.43 |
-|                 3 |        3.19937 |    3.20 |
-
 
 (i5-9400F, 6 Cores)
 
