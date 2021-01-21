@@ -40,6 +40,16 @@ If not indicated otherwise, tests were performed on a
 |                 4 |        0.97739 |    4.91 |
 
 
+(i7-4702MQ, 4 Cores)
+
+| number of workers | time (seconds) | speedup |
+|-------------------+----------------+---------|
+|          (serial) |        7.86994 |       1 |
+|                 1 |        4.06913 |    1.93 |
+|                 2 |        4.43587 |    1.77 |
+|                 4 |        3.94608 |    1.99 |
+
+
 
 # Variant C (Broadcast, Scatter, Gather)
 
@@ -58,3 +68,12 @@ If not indicated otherwise, tests were performed on a
 |                 1 |        1.06059 |    3.63 |
 |                 2 |        1.06773 |    3.87 |
 |                 4 |        0.99163 |    4.84 |
+
+(i7-4702MQ, 4 Cores)
+
+| number of workers | time (seconds) | speedup |
+|-------------------+----------------+---------|
+|          (serial) |        8.61724 |       1 |
+|                 1 |        3.74823 |    2.30 |
+|                 2 |        2.16570 |    3.98 |
+|                 4 |        2.19499 |    3.93 |
